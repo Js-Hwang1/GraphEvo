@@ -20,59 +20,39 @@ using namespace std;
 
 const int MAX_N = 1024;
 
-double computeASPL(const Graph &g) {
+double computeASPL_BFS(const Graph &g) {
     int n = g.size();
-    if (n == 0)
-        return 0.0;
-    
+    if(n == 0) return 0.0;
 
-    std::vector<DynamicBitset> neighbor;
-    neighbor.reserve(n);
-    for (int i = 0; i < n; i++) {
-        DynamicBitset db(n);
-        for (int j : g[i]) {
-            db.set(j);
-        }
-        neighbor.push_back(db);
-    }
-    
     long long totalDistance = 0;
-    long long count = 0;
-    
-    for (int src = 0; src < n; src++) {
-        DynamicBitset visited(n);
-        visited.reset();
-        visited.set(src);
-        DynamicBitset current(n);
-        current.reset();
-        current.set(src);
-        int d = 0;
-        
-        while (true) {
-            DynamicBitset next(n);
-            next.reset();
-            for (int v = 0; v < n; v++) {
-                if (current.test(v)) {
-                    next |= neighbor[v];
-                }
-            }
-            DynamicBitset notVisited = ~visited;
-            next &= notVisited;
-            if (next.none())
-                break;
-            d++;
+    long long pairCount = 0;
 
-            for (int v = 0; v < n; v++) {
-                if (next.test(v)) {
-                    totalDistance += d;
-                    count++;
+    for (int src = 0; src < n; src++) {
+        std::vector<int> dist(n, -1);
+        std::queue<int> q;
+
+        dist[src] = 0;
+        q.push(src);
+
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (int v : g[u]) {
+                if (dist[v] == -1) {
+                    dist[v] = dist[u] + 1;
+                    q.push(v);
                 }
             }
-            visited |= next;
-            current = next;
+        }
+
+        for (int i = 0; i < n; i++) {
+            if (i != src && dist[i] != -1) {
+                totalDistance += dist[i];
+                pairCount++;
+            }
         }
     }
-    return (count > 0) ? static_cast<double>(totalDistance) / count : 0.0;
+    return (pairCount > 0) ? static_cast<double>(totalDistance) / pairCount : 0.0;
 }
 
 
