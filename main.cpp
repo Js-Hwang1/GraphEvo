@@ -10,12 +10,18 @@ using namespace std;
 using namespace std::chrono;
 
 int main() {
-    const int n = 32;                  // Total number of vertices (must be divisible by symmetry)
-    const int k = 3;                   // Regular graph degree
-    const int symmetry = 1;            // Symmetry parameter (g)
-    const int populationSize = 250;
+    const int n = 64;                                         // Total number of vertices (must be divisible by symmetry)
+    const int k = 3;                                          // Regular graph degree
+    const int symmetry = 1;                                   // Symmetry parameter (g)
+    const int populationSize = 100;
     const int generations =10000;
-    const double mutationRate = 0.1;   // Recommended to set it to 0.05 - 0.1
+    double mutationRate = 0.1;                                 // Recommended to set it to 0.05 - 0.1
+    const double minMutationRate = 0.01;
+    const double maxMutationRate = 0.5;
+    const int stagnationThreshold = (int) generations*0.01;    // Increase mutation rate if no improvements.
+    double bestFitness = std::numeric_limits<double>::infinity();
+    int stagnationCount = 0;
+    
     const double tolerance = 0.001;    // Tolerance for acceptance criterion (currently set to accept within 0.1%)
     
     const double theoreticalLowerASPL = minASPL(n, k);
@@ -53,7 +59,25 @@ int main() {
         sort(population.begin(), population.end(), [](const Individual &a, const Individual &b) {
             return a.fitness < b.fitness;
         });
-        
+    
+
+        // Adaptive mutation rate changes!!!
+        if (population[0].fitness < bestFitness - 1e-6) { // Use a small epsilon for improvement
+            bestFitness = population[0].fitness;
+            stagnationCount = 0;
+            // Slowly decrease mutation rate when progress is good.
+            mutationRate = max(minMutationRate, mutationRate * 0.95);
+        } else {
+            stagnationCount++;
+            // Increase mutation rate if progress stalls.
+            if (stagnationCount >= stagnationThreshold) {
+                mutationRate = min(maxMutationRate, mutationRate * 1.5);
+                stagnationCount = 0; // reset counter after increasing mutation rate
+                cout << "Increased mutation rate to " << mutationRate << " at generation " << gen << "\n";
+            }
+        }
+
+
         vector<Individual> newPopulation;
         int elitism = max(1, populationSize / 10);
         for (int i = 0; i < elitism; i++) {
@@ -92,4 +116,3 @@ int main() {
     return 0;
 }
 
-//2.85714
