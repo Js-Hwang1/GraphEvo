@@ -1,3 +1,4 @@
+```
 GraphEVO/
 ├── src/
 │   ├── main.cpp             // Main sequential GA driver.
@@ -27,3 +28,4 @@ GraphEVO/
 │
 ├── CMakeLists.txt           // Build configuration 
 └── Makefile                 // Alternative Makefile.
+```
