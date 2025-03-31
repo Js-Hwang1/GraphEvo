@@ -14,8 +14,21 @@ std::ofstream logFile;
 
 bool isValidGraph(const Graph &g, int degree) {
     for (size_t i = 0; i < g.size(); i++) {
-        if (static_cast<int>(g[i].size()) != degree)
+        // Check if vertex i has the correct degree
+        if (static_cast<int>(g[i].size()) != degree) {
             return false;
+        }
+        // Check symmetry: for each neighbor j of i, ensure i is in g[j]
+        for (int j : g[i]) {
+            // Make sure j is a valid vertex
+            if (j < 0 || j >= static_cast<int>(g.size())) {
+                return false;
+            }
+            // Check if i exists in the neighbor list of j
+            if (std::find(g[j].begin(), g[j].end(), i) == g[j].end()) {
+                return false;
+            }
+        }
     }
     return true;
 }
