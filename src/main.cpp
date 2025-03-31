@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
         logMessage("GraphEVO started.");
 
         // Default parameters.
-        int n = 64, k = 3, symmetry = 1, populationSize = 200, generations = 10000;
+        int n = 32, k = 3, symmetry = 1, populationSize = 100, generations = 100;
         double mutationRate = 0.1, tolerance = 0.0001;
 
         // Parse command-line arguments.
