@@ -3,10 +3,8 @@
 
 #include "functions.hpp"
 
-// Generates a base graph (of size baseSize) that is regular with the given degree.
-Graph generateBaseGraph(int baseSize, int degree);
-
-// Generates a symmetric graph with n vertices, regular degree, and a specified symmetry.
+Graph generateBaseGraphCirculant(int baseSize, int degree);
+Graph generateBaseGraphGreedy(int baseSize, int degree);
+Graph generateBaseGraphHybrid(int baseSize, int degree) ;
 Graph generateSymmetricGraph(int n, int degree, int symmetry);
-
 #endif // GRAPH_GENERATOR_HPP

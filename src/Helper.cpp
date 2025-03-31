@@ -12,6 +12,14 @@ using namespace std;
 
 std::ofstream logFile;
 
+bool isValidGraph(const Graph &g, int degree) {
+    for (size_t i = 0; i < g.size(); i++) {
+        if (static_cast<int>(g[i].size()) != degree)
+            return false;
+    }
+    return true;
+}
+
 void printHeader(int n, int k, int symmetry, int populationSize, int generations, double mutationRate, double tolerance, double theoreticalLowerASPL){
     cout << "GA parameters:\n"
     << "  n = " << n << "\n"

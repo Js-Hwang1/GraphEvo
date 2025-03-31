@@ -9,6 +9,8 @@
 
 extern std::ofstream logFile;
 
+bool isValidGraph(const Graph &g, int degree);
+
 // Prints header information for the GA run.
 void printHeader(int n, int k, int symmetry, int populationSize, int generations, double mutationRate, double tolerance, double theoreticalLowerASPL);
 
