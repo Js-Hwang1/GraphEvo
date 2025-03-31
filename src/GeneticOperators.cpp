@@ -302,7 +302,6 @@ Individual mutate(const Individual &parent, double mutationRate, int targetDegre
     }
     
     if (!isValidGraph(child.graph, targetDegree)) {
-        std::cerr << "Mutation: Graph is not " << targetDegree << "-regular after mutation. Falling back to deterministic construction." << std::endl;
         // Fall back: regenerate the graph deterministically.
         child.graph = generateSymmetricGraph(n, targetDegree, 1); // Assuming symmetry=1 for fallback.
     }
