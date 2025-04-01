@@ -18,7 +18,7 @@ GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSiz
       stagnationCount(0),
       minMutationRate(0.01),
       maxMutationRate(0.5),
-      stagnationThreshold(static_cast<int>(generations * 0.01))
+      stagnationThreshold(static_cast<int>(generations * 0.1))
 {
     std::random_device rd;
     rng.seed(rd());
@@ -32,16 +32,21 @@ void GeneticAlgorithm::initializePopulation() {
 }
 
 bool GeneticAlgorithm::run() {
+    bool converged = false;
+    int convergenceGeneration = -1;
+    int extraGenerations = static_cast<int>(generations * 0.05);
+
     for (int gen = 0; gen < generations; gen++) {
         // Check if any individual meets the acceptance criterion.
         for (const auto &ind : population) {
             if (fabs(ind.aspl - theoreticalLowerASPL) / theoreticalLowerASPL < tolerance) {
-                std::cout << "Found acceptable graph in generation " << gen << "\n"
-                          << "  ASPL = " << ind.aspl << "\n"
-                          << "  theoretical lower bound = " << theoreticalLowerASPL << "\n"
-                          << "  Algebraic Connectivity = " << ind.algebraicConnectivity << "\n";
-                outputToCSV(ind, theoreticalLowerASPL, symmetry);
-                return true;
+                if (!converged) {
+                    converged = true;
+                    convergenceGeneration = gen;
+                    std::cout << "Convergence achieved at generation " << gen 
+                              << ". Continuing for " << extraGenerations 
+                              << " extra generations to explore further improvements." << std::endl;
+                }
             }
         }
         
@@ -101,6 +106,12 @@ bool GeneticAlgorithm::run() {
         
         std::cout << "Generation " << gen << ": Best fitness = " << population[0].fitness
                   << ", ASPL = " << population[0].aspl << "\n";
+
+        if (converged && (gen >= convergenceGeneration + extraGenerations)) {
+            std::cout << "Extra generations complete. Acceptable graph found." << std::endl;
+            outputToCSV(population[0], theoreticalLowerASPL, symmetry);
+            return true;
+        }
     }
     return false;
 }

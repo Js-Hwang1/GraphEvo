@@ -13,22 +13,45 @@ using namespace std;
 std::ofstream logFile;
 
 bool isValidGraph(const Graph &g, int degree) {
+    // Check degrees and symmetry.
     for (size_t i = 0; i < g.size(); i++) {
-        // Check if vertex i has the correct degree
+        // Check if vertex i has the correct degree.
         if (static_cast<int>(g[i].size()) != degree) {
             return false;
         }
-        // Check symmetry: for each neighbor j of i, ensure i is in g[j]
+        // Check symmetry: for each neighbor j of i, ensure i is in g[j].
         for (int j : g[i]) {
-            // Make sure j is a valid vertex
+            // Make sure j is a valid vertex.
             if (j < 0 || j >= static_cast<int>(g.size())) {
                 return false;
             }
-            // Check if i exists in the neighbor list of j
+            // Check if i exists in the neighbor list of j.
             if (std::find(g[j].begin(), g[j].end(), i) == g[j].end()) {
                 return false;
             }
         }
+    }
+    
+    // Check connectivity using BFS.
+    int n = g.size();
+    std::vector<bool> visited(n, false);
+    std::queue<int> q;
+    q.push(0);
+    visited[0] = true;
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+        for (int v : g[u]) {
+            if (!visited[v]) {
+                visited[v] = true;
+                q.push(v);
+            }
+        }
+    }
+    // If any vertex is not visited, the graph is disconnected.
+    for (bool flag : visited) {
+        if (!flag)
+            return false;
     }
     return true;
 }

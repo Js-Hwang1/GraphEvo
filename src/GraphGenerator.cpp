@@ -188,6 +188,5 @@ Graph generateSymmetricGraph(int n, int degree, int symmetry) {
     for (int i = 0; i < n; i++) {
         std::sort(g[i].begin(), g[i].end());
     }
-    
     return g;
 }

@@ -141,11 +141,7 @@ Individual crossover(const Individual &parent1, const Individual &parent2, int n
         }
     }
     
-    // Only attempt matching if the total deficit is even.
-    if (total_deficit % 2 != 0) {
-        std::cerr << "Error: Total deficit " << total_deficit 
-                  << " is odd. Proceeding with greedy repair instead." << std::endl;
-    } else {
+    if(total_deficit % 2 == 0) {
         while (!foundMatching && matchingAttempts < maxMatchingAttempts) {
             // Create a shuffled copy of slots to try a different matching order.
             std::vector<int> shuffledSlots = slots;
