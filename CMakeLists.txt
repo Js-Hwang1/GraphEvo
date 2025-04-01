@@ -67,9 +67,9 @@ endif()
 
 # If MPI is found, also build the MPI (island model) executable.
 if(MPI_CXX_FOUND)
-    add_executable(GraphEVOI_IM ${COMMON_SOURCES} ${CMAKE_SOURCE_DIR}/src/mainIM.cpp)
+    add_executable(GraphEVO_IM ${COMMON_SOURCES} ${CMAKE_SOURCE_DIR}/src/mainIM.cpp)
     if(OpenMP_CXX_FOUND)
         target_link_libraries(GraphEVO_IM OpenMP::OpenMP_CXX)
     endif()
-    target_link_libraries(GraphEVOI_IM MPI::MPI_CXX)
+    target_link_libraries(GraphEVO_IM MPI::MPI_CXX)
 endif()
