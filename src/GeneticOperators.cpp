@@ -244,68 +244,87 @@ Individual crossover(const Individual &parent1, const Individual &parent2, int n
 }
 
 Individual mutate(const Individual &parent, double mutationRate, int targetDegree, std::mt19937 &rng) {
+    // Create a copy of the parent as the initial child.
     Individual child = parent;
     int n = child.graph.size();
     std::uniform_real_distribution<> probDist(0.0, 1.0);
-    
+
+    // With probability mutationRate, perform an opt-2 mutation.
     if (probDist(rng) < mutationRate) {
-        std::vector<int> subset;
+        // Collect all unique undirected edges (each edge only once).
+        std::vector<std::pair<int, int>> edges;
         for (int i = 0; i < n; i++) {
-            if (probDist(rng) < 0.1) {  // Approximately 10% of vertices.
-                subset.push_back(i);
-            }
-        }
-        // Remove all edges among vertices in the subset.
-        for (int i : subset) {
             for (int j : child.graph[i]) {
-                if (std::find(subset.begin(), subset.end(), j) != subset.end()) {
-                    auto it = std::find(child.graph[j].begin(), child.graph[j].end(), i);
-                    if (it != child.graph[j].end())
-                        child.graph[j].erase(it);
+                if (j > i) {  // Ensure uniqueness.
+                    edges.push_back({i, j});
                 }
             }
-            auto newEnd = std::remove_if(child.graph[i].begin(), child.graph[i].end(), 
-                                    [&](int j){ return std::find(subset.begin(), subset.end(), j) != subset.end(); });
-            child.graph[i].erase(newEnd, child.graph[i].end());
         }
-        // Aggressively rewire the subgraph.
-        const int repairLimit = 100000;
-        int repairIter = 0;
-        bool rewired = false;
-        while (!rewired && repairIter < repairLimit) {
-            rewired = true;
-            for (int i : subset) {
-                if (child.graph[i].size() < static_cast<size_t>(targetDegree)) {
-                    std::vector<int> candidates;
-                    for (int j : subset) {
-                        if (j == i) continue;
-                        if (child.graph[i].size() < static_cast<size_t>(targetDegree) &&
-                            child.graph[j].size() < static_cast<size_t>(targetDegree) &&
-                            std::find(child.graph[i].begin(), child.graph[i].end(), j) == child.graph[i].end()) {
-                            candidates.push_back(j);
-                        }
-                    }
-                    if (!candidates.empty()) {
-                        rewired = false;
-                        std::uniform_int_distribution<> cdistr(0, candidates.size() - 1);
-                        int j = candidates[cdistr(rng)];
-                        child.graph[i].push_back(j);
-                        child.graph[j].push_back(i);
-                    }
+        // Proceed only if at least two edges exist.
+        if (edges.size() >= 2) {
+            int idx1 = -1, idx2 = -1;
+            bool validPair = false;
+            // Try up to 100 times to select two edges with no common vertices.
+            for (int attempt = 0; attempt < 100; attempt++) {
+                idx1 = std::uniform_int_distribution<>(0, edges.size()-1)(rng);
+                idx2 = std::uniform_int_distribution<>(0, edges.size()-1)(rng);
+                if (idx1 == idx2)
+                    continue;
+                auto e1 = edges[idx1];
+                auto e2 = edges[idx2];
+                if (e1.first != e2.first && e1.first != e2.second &&
+                    e1.second != e2.first && e1.second != e2.second) {
+                    validPair = true;
+                    break;
                 }
             }
-            repairIter++;
-        }
-        if (repairIter >= repairLimit) {
-            std::cerr << "Mutation subgraph rewiring did not converge after " << repairLimit << " iterations." << std::endl;
+            if (validPair) {
+                auto e1 = edges[idx1];
+                auto e2 = edges[idx2];
+                // Two possible 2-opt swap options:
+                // Option 1: (e1.first, e2.first) and (e1.second, e2.second)
+                // Option 2: (e1.first, e2.second) and (e1.second, e2.first)
+                bool option = (probDist(rng) < 0.5);
+                std::pair<int, int> newEdge1, newEdge2;
+                if (option) {
+                    newEdge1 = {e1.first, e2.first};
+                    newEdge2 = {e1.second, e2.second};
+                } else {
+                    newEdge1 = {e1.first, e2.second};
+                    newEdge2 = {e1.second, e2.first};
+                }
+                // Lambda to remove an edge from the graph.
+                auto removeEdge = [&](int u, int v) {
+                    auto it = std::find(child.graph[u].begin(), child.graph[u].end(), v);
+                    if (it != child.graph[u].end()) {
+                        child.graph[u].erase(it);
+                    }
+                };
+                // Lambda to add an edge (if not already present) and enforce symmetry.
+                auto addEdge = [&](int u, int v) {
+                    if (std::find(child.graph[u].begin(), child.graph[u].end(), v) == child.graph[u].end()) {
+                        child.graph[u].push_back(v);
+                    }
+                };
+                // Remove the original edges.
+                removeEdge(e1.first, e1.second);
+                removeEdge(e1.second, e1.first);
+                removeEdge(e2.first, e2.second);
+                removeEdge(e2.second, e2.first);
+                // Add the new edges with symmetry.
+                addEdge(newEdge1.first, newEdge1.second);
+                addEdge(newEdge1.second, newEdge1.first);
+                addEdge(newEdge2.first, newEdge2.second);
+                addEdge(newEdge2.second, newEdge2.first);
+            }
         }
     }
-    
+
+    // Validate the mutated graph; if it fails to be k-regular, fall back to a deterministic construction.
     if (!isValidGraph(child.graph, targetDegree)) {
-        // Fall back: regenerate the graph deterministically.
-        child.graph = generateSymmetricGraph(n, targetDegree, 1); // Assuming symmetry=1 for fallback.
+        child.graph = generateSymmetricGraph(n, targetDegree, 1);  // Fallback with symmetry = 1.
     }
-    
+
     // Recompute fitness.
     child.aspl = computeASPL(child.graph);
     child.algebraicConnectivity = computeAlgebraicConnectivity(child.graph);
