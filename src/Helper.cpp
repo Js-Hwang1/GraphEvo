@@ -110,9 +110,19 @@ void outputToCSV(const Individual &ind, double theoreticalMinASPL, int symmetry)
 }
 
 void initLog() {
-    logFile.open("GraphEVO.log", ios::out | ios::app);
+    std::string baseName = "GraphEVO";
+    std::string extension = ".log";
+    std::string filename = baseName + extension;
+    int count = 0;
+    
+    while (std::ifstream(filename)) {
+        count++;
+        filename = baseName + std::to_string(count) + extension;
+    }
+    
+    logFile.open(filename, std::ios::out | std::ios::app);
     if (!logFile.is_open()) {
-        cerr << "Error: Unable to open log file." << endl;
+        std::cerr << "Error: Unable to open log file." << std::endl;
     }
 }
 

@@ -114,6 +114,7 @@ bool GeneticAlgorithm::run() {
 
         if (converged && (gen >= convergenceGeneration + extraGenerations)) {
             std::cout << "Extra generations complete. Acceptable graph found." << std::endl;
+            logMessage("Extra generations complete. Acceptable graph found.");
             outputToCSV(population[0], theoreticalLowerASPL, symmetry);
             return true;
         }
