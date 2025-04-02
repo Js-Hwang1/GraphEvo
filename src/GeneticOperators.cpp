@@ -12,7 +12,7 @@ Individual createIndividual(int n, int degree, int symmetry) {
     ind.graph = generateSymmetricGraph(n, degree, symmetry);
     ind.aspl = computeASPL(ind.graph);
     ind.algebraicConnectivity = computeAlgebraicConnectivity(ind.graph);
-    double lambda = 1.0;
+    double lambda = 1;
     ind.fitness = ind.aspl - lambda * ind.algebraicConnectivity;
     return ind;
 }

@@ -17,7 +17,7 @@ GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSiz
       theoreticalLowerASPL(minASPL(n, k)),
       bestFitness(std::numeric_limits<double>::infinity()),
       stagnationCount(0),
-      minMutationRate(0.01),
+      minMutationRate(0.001),
       maxMutationRate(0.5),
       stagnationThreshold(static_cast<int>(generations * 0.1))
 {
@@ -109,7 +109,8 @@ bool GeneticAlgorithm::run() {
         
         std::cout << "Generation " << gen << ": Best fitness = " << population[0].fitness
                   << ", ASPL = " << population[0].aspl << "\n";
-        std::string msg = std::string("Generation ") + std::to_string(gen) + ": Best fitness = " + std::to_string(population[0].fitness) + ", ASPL = " + std::to_string(population[0].aspl);
+        double absErr = (population[0].aspl - theoreticalLowerASPL)*100/theoreticalLowerASPL;
+        std::string msg = std::string("Generation ") + std::to_string(gen) + ": Best fitness = " + std::to_string(population[0].fitness) + ", ASPL = " + std::to_string(population[0].aspl) + "absError = " + std::to_string(absErr) + "%";
         logMessage(msg);
 
         if (converged && (gen >= convergenceGeneration + extraGenerations)) {
