@@ -11,7 +11,7 @@
 
 using namespace std;
 
-std::ofstream logFile;
+ofstream logFile;
 
 bool isValidGraph(const Graph &g, int degree) {
     // Check degrees and symmetry.
@@ -27,7 +27,7 @@ bool isValidGraph(const Graph &g, int degree) {
                 return false;
             }
             // Check if i exists in the neighbor list of j.
-            if (std::find(g[j].begin(), g[j].end(), i) == g[j].end()) {
+            if (find(g[j].begin(), g[j].end(), i) == g[j].end()) {
                 return false;
             }
         }
@@ -35,8 +35,8 @@ bool isValidGraph(const Graph &g, int degree) {
     
     // Check connectivity using BFS.
     int n = g.size();
-    std::vector<bool> visited(n, false);
-    std::queue<int> q;
+    vector<bool> visited(n, false);
+    queue<int> q;
     q.push(0);
     visited[0] = true;
     while (!q.empty()) {
@@ -71,15 +71,27 @@ void printHeader(int n, int k, int symmetry, int populationSize, int generations
 
 
 void outputToCSV(const Individual &ind, double theoreticalMinASPL, int symmetry) {
-    ofstream outFile("output.csv");
+    string baseName = "output";
+    string extension = ".csv";
+    string filename = baseName + extension;
+    int count = 0;
+    
+    // Check if the file exists. If it does, create a new file name.
+    while (ifstream(filename)) {
+        count++;
+        filename = baseName + to_string(count) + extension;
+    }
+    
+    ofstream outFile(filename);
     if (!outFile.is_open()) {
-        cerr << "Error: could not open output.csv for writing." << endl;
+        cerr << "Error: could not open " << filename << " for writing." << endl;
         return;
     }
     
     // Header information.
-    outFile << "Theoretical lower bound:" << fixed << setprecision(20) << theoreticalMinASPL <<endl;
+    outFile << "Theoretical lower bound:" << fixed << setprecision(20) << theoreticalMinASPL << endl;
     outFile << "minASPL: " << fixed << setprecision(20) << ind.aspl << endl;
+    outFile << "absError: " << fixed << setprecision(5) << (ind.aspl - theoreticalMinASPL)*100 / theoreticalMinASPL << "%"<< endl;
     outFile << "symmetry(g): " << symmetry  << endl;
     outFile << "Algebraic Connectivity: " << fixed << setprecision(6) << ind.algebraicConnectivity << endl;
     outFile << "Adjacency list:" << endl;
@@ -98,15 +110,15 @@ void outputToCSV(const Individual &ind, double theoreticalMinASPL, int symmetry)
 }
 
 void initLog() {
-    logFile.open("GraphEVO.log", std::ios::out | std::ios::app);
+    logFile.open("GraphEVO.log", ios::out | ios::app);
     if (!logFile.is_open()) {
-        std::cerr << "Error: Unable to open log file." << std::endl;
+        cerr << "Error: Unable to open log file." << endl;
     }
 }
 
-void logMessage(const std::string &msg) {
+void logMessage(const string &msg) {
     if (logFile.is_open()) {
-        logFile << msg << std::endl;
+        logFile << msg << endl;
     }
 }
 
@@ -117,7 +129,7 @@ void closeLog() {
 }
 
 void printUsage(const char* progName) {
-    std::cout << "Usage: " << progName << " [options]\n"
+    cout << "Usage: " << progName << " [options]\n"
               << "Options:\n"
               << "  -n <int>       Total number of vertices (default: 64)\n"
               << "  -k <int>       Regular graph degree (default: 3)\n"

@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
 
         // Default parameters.
         int n = 32, k = 3, symmetry = 1, populationSize = 100, generations = 100;
-        double mutationRate = 0.1, tolerance = 0.0001;
+        double mutationRate = 0.1, tolerance = 0.001;
 
         // Parse command-line arguments.
         for (int i = 1; i < argc; i++) {

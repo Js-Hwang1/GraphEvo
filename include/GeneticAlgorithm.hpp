@@ -41,6 +41,7 @@ public:
 
     // Retrieve the best individual.
     Individual getBestIndividual();
+
 };
 
 #endif // GENETIC_ALGORITHM_HPP

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 #include <limits>
+#include <string>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -66,6 +67,8 @@ bool GeneticAlgorithm::run() {
                 mutationRate = std::min(maxMutationRate, mutationRate * 1.5);
                 stagnationCount = 0;
                 std::cout << "Increased mutation rate to " << mutationRate << " at generation " << gen << "\n";
+                std::string msg = std::string("Increased mutation rate to ") + std::to_string(mutationRate) + " at generation " + std::to_string(gen);
+                logMessage(msg);
             }
         }
         
@@ -106,6 +109,8 @@ bool GeneticAlgorithm::run() {
         
         std::cout << "Generation " << gen << ": Best fitness = " << population[0].fitness
                   << ", ASPL = " << population[0].aspl << "\n";
+        std::string msg = std::string("Generation ") + std::to_string(gen) + ": Best fitness = " + std::to_string(population[0].fitness) + ", ASPL = " + std::to_string(population[0].aspl);
+        logMessage(msg);
 
         if (converged && (gen >= convergenceGeneration + extraGenerations)) {
             std::cout << "Extra generations complete. Acceptable graph found." << std::endl;
