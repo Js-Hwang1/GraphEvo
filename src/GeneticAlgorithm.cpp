@@ -3,11 +3,12 @@
 #include <algorithm>
 #include <limits>
 #include <string>
+#include <iomanip>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations, double mutationRate, double tolerance, bool useSeedGraphs, double alpha, double beta)
+GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations, double mutationRate, double tolerance, bool useSeedGraphs, double alpha, double beta, bool computeDiversity)
     : n(n), k(k), symmetry(symmetry), populationSize(populationSize),
       generations(generations), mutationRate(mutationRate), tolerance(tolerance),
       theoreticalLowerASPL(minASPL(n, k)),
@@ -17,7 +18,8 @@ GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSiz
       minMutationRate(0.001),
       maxMutationRate(0.5),
       stagnationThreshold(static_cast<int>(generations * 0.1)),
-      useSeedGraphs(useSeedGraphs)
+      useSeedGraphs(useSeedGraphs),
+      computeDiversity(computeDiversity)
 {
     std::random_device rd;
     rng.seed(rd());
@@ -123,11 +125,38 @@ bool GeneticAlgorithm::run() {
         newPopulation.insert(newPopulation.end(), offspring.begin(), offspring.end());
         population = newPopulation;
         
-        std::cout << "Generation " << gen << ": Best fitness = " << population[0].fitness
-                  << ", ASPL = " << population[0].aspl << "\n";
-        double absErr = (population[0].aspl - theoreticalLowerASPL)*100/theoreticalLowerASPL;
-        std::string msg = std::string("Generation ") + std::to_string(gen) + ": Best fitness = " + std::to_string(population[0].fitness) + ", ASPL = " + std::to_string(population[0].aspl) + "absError = " + std::to_string(absErr) + "%";
-        logMessage(msg);
+        // Print generation statistics
+        std::cout << std::fixed << std::setprecision(6);
+        std::cout << "Generation " << gen << ":"
+                  << "  Best fitness = " << population[0].fitness
+                  << ", ASPL = " << population[0].aspl;
+        
+        // Compute and print diversity metrics if enabled
+        if (computeDiversity) {
+            DiversityMetrics diversity = measurePopulationDiversity(population);
+            std::cout << ", Fitness std dev = " << diversity.fitnessStdDev
+                      << ", range = " << diversity.fitnessRange 
+                      << ", Avg edge diff = " << diversity.avgEdgeDiff
+                      << ", path dist diversity = " << diversity.pathDistDiversity;
+            
+            std::string msg = std::string("Generation ") + std::to_string(gen) + ":"
+                           + "  Best fitness = " + std::to_string(population[0].fitness)
+                           + ", ASPL = " + std::to_string(population[0].aspl)
+                           + ", absError = " + std::to_string((population[0].aspl - theoreticalLowerASPL)*100/theoreticalLowerASPL) + "%"
+                           + ", Fitness std dev = " + std::to_string(diversity.fitnessStdDev)
+                           + ", range = " + std::to_string(diversity.fitnessRange)
+                           + ", Avg edge diff = " + std::to_string(diversity.avgEdgeDiff)
+                           + ", path dist diversity = " + std::to_string(diversity.pathDistDiversity);
+            logMessage(msg);
+        } else {
+            double absErr = (population[0].aspl - theoreticalLowerASPL)*100/theoreticalLowerASPL;
+            std::string msg = std::string("Generation ") + std::to_string(gen) + ":"
+                           + "  Best fitness = " + std::to_string(population[0].fitness)
+                           + ", ASPL = " + std::to_string(population[0].aspl)
+                           + ", absError = " + std::to_string(absErr) + "%";
+            logMessage(msg);
+        }
+        std::cout<<"\n";
 
         if (converged && (gen >= convergenceGeneration + extraGenerations)) {
             std::cout << "Extra generations complete. Acceptable graph found." << std::endl;

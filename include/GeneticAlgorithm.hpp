@@ -34,11 +34,12 @@ public:
     // Seed graph functionality
     std::unique_ptr<Grow> grow;
     bool useSeedGraphs;
+    bool computeDiversity;  // Flag to control diversity computation
 
     // Constructor.
     GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations,
                      double mutationRate, double tolerance, bool useSeedGraphs = false,
-                     double alpha = 1.0, double beta = 1.0);
+                     double alpha = 1.0, double beta = 1.0, bool computeDiversity = false);
 
     // Initialize the population.
     void initializePopulation();

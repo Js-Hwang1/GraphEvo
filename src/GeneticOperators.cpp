@@ -9,6 +9,8 @@
 #include <queue>
 #include <vector>
 #include <map>
+#include <numeric>
+#include <cmath>
 
 Individual createIndividual(int n, int degree, int symmetry, double alpha, double beta) {
     Individual ind;
@@ -504,4 +506,119 @@ Individual mutate(const Individual& parent, double mutationRate, int targetDegre
         
         return child;
     }
+}
+
+// Helper function to compute edge difference between two graphs
+double computeEdgeDifference(const Graph& g1, const Graph& g2) {
+    int n = g1.size();
+    int diff = 0;
+    
+    for (int i = 0; i < n; i++) {
+        // Count edges in g1 that are not in g2
+        for (int j : g1[i]) {
+            if (j > i && std::find(g2[i].begin(), g2[i].end(), j) == g2[i].end()) {
+                diff++;
+            }
+        }
+        // Count edges in g2 that are not in g1
+        for (int j : g2[i]) {
+            if (j > i && std::find(g1[i].begin(), g1[i].end(), j) == g1[i].end()) {
+                diff++;
+            }
+        }
+    }
+    
+    return static_cast<double>(diff) / (n * (n - 1) / 2);  // Normalize by max possible differences
+}
+
+// Helper function to compute path distribution difference
+double computePathDistDifference(const std::vector<int>& dist1, const std::vector<int>& dist2) {
+    size_t maxLen = std::max(dist1.size(), dist2.size());
+    double diff = 0.0;
+    
+    for (size_t i = 0; i < maxLen; i++) {
+        double p1 = (i < dist1.size()) ? static_cast<double>(dist1[i]) : 0.0;
+        double p2 = (i < dist2.size()) ? static_cast<double>(dist2[i]) : 0.0;
+        diff += std::abs(p1 - p2);
+    }
+    
+    return diff / maxLen;  // Normalize by max length
+}
+
+DiversityMetrics measurePopulationDiversity(const std::vector<Individual>& population) {
+    DiversityMetrics metrics;
+    int n = population.size();
+    if (n < 2) {
+        // Return zero diversity for single individual
+        metrics.fitnessStdDev = 0.0;
+        metrics.fitnessRange = 0.0;
+        metrics.avgEdgeDiff = 0.0;
+        metrics.pathDistDiversity = 0.0;
+        return metrics;
+    }
+    
+    // Compute fitness statistics
+    std::vector<double> fitnessValues;
+    fitnessValues.reserve(n);
+    for (const auto& ind : population) {
+        fitnessValues.push_back(ind.fitness);
+    }
+    
+    // Calculate mean
+    double mean = std::accumulate(fitnessValues.begin(), fitnessValues.end(), 0.0) / n;
+    
+    // Calculate standard deviation
+    double sumSquaredDiff = 0.0;
+    for (double f : fitnessValues) {
+        double diff = f - mean;
+        sumSquaredDiff += diff * diff;
+    }
+    metrics.fitnessStdDev = std::sqrt(sumSquaredDiff / n);
+    
+    // Calculate range
+    auto [minFitness, maxFitness] = std::minmax_element(fitnessValues.begin(), fitnessValues.end());
+    metrics.fitnessRange = *maxFitness - *minFitness;
+    
+    // Compute average edge difference between graphs
+    double totalEdgeDiff = 0.0;
+    int comparisons = 0;
+    
+    // Sample pairs of graphs to compute average edge difference
+    const int maxComparisons = std::min(100, n * (n - 1) / 2);
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    std::uniform_int_distribution<> dist(0, n - 1);
+    
+    for (int i = 0; i < maxComparisons; i++) {
+        int idx1 = dist(rng);
+        int idx2 = dist(rng);
+        if (idx1 != idx2) {
+            totalEdgeDiff += computeEdgeDifference(population[idx1].graph, population[idx2].graph);
+            comparisons++;
+        }
+    }
+    metrics.avgEdgeDiff = totalEdgeDiff / comparisons;
+    
+    // Compute path distribution diversity
+    std::vector<std::vector<int>> pathDistributions;
+    pathDistributions.reserve(n);
+    
+    for (const auto& ind : population) {
+        pathDistributions.push_back(computeShortestPathDistribution(ind.graph));
+    }
+    
+    double totalPathDistDiff = 0.0;
+    comparisons = 0;
+    
+    for (int i = 0; i < maxComparisons; i++) {
+        int idx1 = dist(rng);
+        int idx2 = dist(rng);
+        if (idx1 != idx2) {
+            totalPathDistDiff += computePathDistDifference(pathDistributions[idx1], pathDistributions[idx2]);
+            comparisons++;
+        }
+    }
+    metrics.pathDistDiversity = totalPathDistDiff / comparisons;
+    
+    return metrics;
 }
