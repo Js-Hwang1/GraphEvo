@@ -147,5 +147,6 @@ void printUsage(const char* progName) {
               << "  -p <int>       Population size (default: 200)\n"
               << "  -g <int>       Number of generations (default: 10000)\n"
               << "  -m <double>    Mutation rate (default: 0.1)\n"
-              << "  -t <double>    Tolerance (default: 0.0001)\n";
+              << "  -t <double>    Tolerance (default: 0.0001)\n"
+              << "  --seed-dir <path>  Directory containing seed graphs (optional)\n";
 }

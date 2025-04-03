@@ -57,6 +57,7 @@ set(COMMON_SOURCES
     ${CMAKE_SOURCE_DIR}/src/GeneticOperators.cpp
     ${CMAKE_SOURCE_DIR}/src/GraphGenerator.cpp
     ${CMAKE_SOURCE_DIR}/src/Helper.cpp
+    ${CMAKE_SOURCE_DIR}/src/Grow.cpp
 )
 
 # Build the sequential executable (using main.cpp).

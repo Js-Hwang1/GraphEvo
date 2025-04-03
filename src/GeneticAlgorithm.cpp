@@ -11,7 +11,7 @@
 #include <omp.h>
 #endif
 
-GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations, double mutationRate, double tolerance)
+GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations, double mutationRate, double tolerance, bool useSeedGraphs)
     : n(n), k(k), symmetry(symmetry), populationSize(populationSize),
       generations(generations), mutationRate(mutationRate), tolerance(tolerance),
       theoreticalLowerASPL(minASPL(n, k)),
@@ -19,16 +19,32 @@ GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSiz
       stagnationCount(0),
       minMutationRate(0.001),
       maxMutationRate(0.5),
-      stagnationThreshold(static_cast<int>(generations * 0.1))
+      stagnationThreshold(static_cast<int>(generations * 0.1)),
+      useSeedGraphs(useSeedGraphs)
 {
     std::random_device rd;
     rng.seed(rd());
+    
+    if (useSeedGraphs) {
+        grow = std::make_unique<Grow>(n, k, symmetry);
+    }
+}
+
+void GeneticAlgorithm::setSeedGraphDirectory(const std::string& directory) {
+    if (useSeedGraphs && grow) {
+        grow->loadSeedGraphs(directory);
+    }
 }
 
 void GeneticAlgorithm::initializePopulation() {
     population.clear();
-    for (int i = 0; i < populationSize; i++) {
-        population.push_back(createIndividual(n, k, symmetry));
+    
+    if (useSeedGraphs && grow && grow->hasSeedGraphs()) {
+        grow->initializePopulationWithSeeds(population, populationSize);
+    } else {
+        for (int i = 0; i < populationSize; i++) {
+            population.push_back(createIndividual(n, k, symmetry));
+        }
     }
 }
 

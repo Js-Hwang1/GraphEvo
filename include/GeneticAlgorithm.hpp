@@ -2,8 +2,10 @@
 #define GENETIC_ALGORITHM_HPP
 
 #include "functions.hpp"
+#include "Grow.hpp"
 #include <random>
 #include <vector>
+#include <memory>
 
 class GeneticAlgorithm {
 public:
@@ -27,10 +29,14 @@ public:
     // Population and random generator.
     std::vector<Individual> population;
     std::mt19937 rng;
+    
+    // Seed graph functionality
+    std::unique_ptr<Grow> grow;
+    bool useSeedGraphs;
 
     // Constructor.
     GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations,
-                     double mutationRate, double tolerance);
+                     double mutationRate, double tolerance, bool useSeedGraphs = false);
 
     // Initialize the population.
     void initializePopulation();
@@ -41,6 +47,9 @@ public:
 
     // Retrieve the best individual.
     Individual getBestIndividual();
+    
+    // Set seed graph directory
+    void setSeedGraphDirectory(const std::string& directory);
 
 };
 

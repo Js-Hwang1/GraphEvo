@@ -1,5 +1,6 @@
 #include "functions.hpp"
 #include "GeneticAlgorithm.hpp"
+#include "Helper.hpp"
 #include <iostream>
 #include <chrono>
 #include <cstdlib>
@@ -15,8 +16,9 @@ int main(int argc, char* argv[]) {
         logMessage("GraphEVO started.");
 
         // Default parameters.
-        int n = 32, k = 3, symmetry = 1, populationSize = 100, generations = 100;
-        double mutationRate = 0.1, tolerance = 0.001;
+        int n = 64, k = 3, symmetry = 1, populationSize = 1000, generations = 2000;
+        double mutationRate = 0.01, tolerance = 0.0001;
+        std::string seedDirectory;
 
         // Parse command-line arguments.
         for (int i = 1; i < argc; i++) {
@@ -34,6 +36,8 @@ int main(int argc, char* argv[]) {
                 mutationRate = atof(argv[++i]);
             } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
                 tolerance = atof(argv[++i]);
+            } else if (strcmp(argv[i], "--seed-dir") == 0 && i + 1 < argc) {
+                seedDirectory = argv[++i];
             } else {
                 printUsage(argv[0]);
                 return 1;
@@ -51,8 +55,14 @@ int main(int argc, char* argv[]) {
                    ", mutationRate=" + std::to_string(mutationRate) +
                    ", tolerance=" + std::to_string(tolerance));
 
-        // Create the GA engine.
-        GeneticAlgorithm ga(n, k, symmetry, populationSize, generations, mutationRate, tolerance);
+        // Create the GA engine with seed graph support if directory is provided
+        bool useSeedGraphs = !seedDirectory.empty();
+        GeneticAlgorithm ga(n, k, symmetry, populationSize, generations, mutationRate, tolerance, useSeedGraphs);
+        
+        if (useSeedGraphs) {
+            ga.setSeedGraphDirectory(seedDirectory);
+            logMessage("Using seed graphs from directory: " + seedDirectory);
+        }
         
         // Initialize the population.
         ga.initializePopulation();
