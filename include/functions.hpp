@@ -18,10 +18,9 @@ struct Individual {
     double fitness;               
 };
 
-#include "GraphGenerator.hpp"
 #include "FitnessEvaluator.hpp"
 #include "GeneticOperators.hpp"
-#include "GeneticAlgorithm.hpp"
 #include "Helper.hpp"
-
+#include "Grow.hpp"
+#include "GeneticAlgorithm.hpp"
 #endif // FUNCTIONS_HPP

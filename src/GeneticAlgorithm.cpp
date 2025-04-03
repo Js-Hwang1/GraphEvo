@@ -1,8 +1,4 @@
-#include "GeneticAlgorithm.hpp"
-#include "GeneticOperators.hpp"
-#include "FitnessEvaluator.hpp"
-#include "GraphGenerator.hpp"
-#include "Helper.hpp"
+#include "functions.hpp"
 #include <iostream>
 #include <algorithm>
 #include <limits>
@@ -11,10 +7,11 @@
 #include <omp.h>
 #endif
 
-GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations, double mutationRate, double tolerance, bool useSeedGraphs)
+GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations, double mutationRate, double tolerance, bool useSeedGraphs, double alpha, double beta)
     : n(n), k(k), symmetry(symmetry), populationSize(populationSize),
       generations(generations), mutationRate(mutationRate), tolerance(tolerance),
       theoreticalLowerASPL(minASPL(n, k)),
+      alpha(alpha), beta(beta),
       bestFitness(std::numeric_limits<double>::infinity()),
       stagnationCount(0),
       minMutationRate(0.001),
@@ -26,7 +23,7 @@ GeneticAlgorithm::GeneticAlgorithm(int n, int k, int symmetry, int populationSiz
     rng.seed(rd());
     
     if (useSeedGraphs) {
-        grow = std::make_unique<Grow>(n, k, symmetry);
+        grow = std::make_unique<Grow>(n, k, symmetry, alpha, beta);
     }
 }
 
@@ -43,7 +40,7 @@ void GeneticAlgorithm::initializePopulation() {
         grow->initializePopulationWithSeeds(population, populationSize);
     } else {
         for (int i = 0; i < populationSize; i++) {
-            population.push_back(createIndividual(n, k, symmetry));
+            population.push_back(createIndividual(n, k, symmetry, alpha, beta));
         }
     }
 }
@@ -56,7 +53,7 @@ bool GeneticAlgorithm::run() {
     for (int gen = 0; gen < generations; gen++) {
         // Check if any individual meets the acceptance criterion.
         for (const auto &ind : population) {
-            if (fabs(ind.aspl - theoreticalLowerASPL) / theoreticalLowerASPL < tolerance) {
+            if ((fabs(ind.aspl - theoreticalLowerASPL) / theoreticalLowerASPL < tolerance) && ((int) alpha != 0)) {
                 if (!converged) {
                     converged = true;
                     convergenceGeneration = gen;
@@ -115,8 +112,8 @@ bool GeneticAlgorithm::run() {
             int idx2 = distr(local_rng);
             Individual parent1 = population[idx1];
             Individual parent2 = population[idx2];
-            Individual child = crossover(parent1, parent2, n, k, symmetry, local_rng);
-            child = mutate(child, mutationRate, k, local_rng);
+            Individual child = crossover(parent1, parent2, n, k, symmetry, alpha, beta, local_rng);
+            child = mutate(child, mutationRate, k, alpha, beta, local_rng);
             offspring[i] = child;
         }
         

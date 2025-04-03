@@ -2,7 +2,6 @@
 #define GENETIC_ALGORITHM_HPP
 
 #include "functions.hpp"
-#include "Grow.hpp"
 #include <random>
 #include <vector>
 #include <memory>
@@ -18,6 +17,8 @@ public:
     double mutationRate;
     double tolerance;
     double theoreticalLowerASPL;
+    double alpha;
+    double beta;
 
     // Adaptive mutation parameters.
     double bestFitness;
@@ -36,7 +37,8 @@ public:
 
     // Constructor.
     GeneticAlgorithm(int n, int k, int symmetry, int populationSize, int generations,
-                     double mutationRate, double tolerance, bool useSeedGraphs = false);
+                     double mutationRate, double tolerance, bool useSeedGraphs = false,
+                     double alpha = 1.0, double beta = 1.0);
 
     // Initialize the population.
     void initializePopulation();
@@ -50,7 +52,6 @@ public:
     
     // Set seed graph directory
     void setSeedGraphDirectory(const std::string& directory);
-
 };
 
 #endif // GENETIC_ALGORITHM_HPP

@@ -16,10 +16,10 @@ Individual createIndividual(int n, int k, int symmetry);
 class Grow {
 public:
     // Constructor
-    Grow(int n, int k, int symmetry);
+    Grow(int n, int k, int symmetry, double alpha, double beta);
     
     // Load seed graphs from a directory
-    void loadSeedGraphs(const std::string& seedDirectory);
+    void loadSeedGraphs(const std::string& seedPath);
     
     // Get a seed graph that matches the current parameters
     Individual getSeedGraph();
@@ -34,6 +34,8 @@ private:
     int n;
     int k;
     int symmetry;
+    double alpha;
+    double beta;
     std::vector<Individual> seedGraphs;
     
     // Helper function to parse a graph from a CSV file

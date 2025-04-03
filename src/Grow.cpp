@@ -7,8 +7,8 @@
 #include <iostream>
 #include <random>
 
-Grow::Grow(int n, int k, int symmetry)
-    : n(n), k(k), symmetry(symmetry) {}
+Grow::Grow(int n, int k, int symmetry, double alpha, double beta)
+    : n(n), k(k), symmetry(symmetry), alpha(alpha), beta(beta) {}
 
 void Grow::loadSeedGraphs(const std::string& seedPath) {
     seedGraphs.clear();
@@ -88,7 +88,7 @@ void Grow::initializePopulationWithSeeds(std::vector<Individual>& population, in
         Individual seed = seedGraphs[seedDis(gen)];
         
         // Create a mutated version of the seed graph
-        Individual mutated = mutate(seed, 0.1, k, gen);  // Using 0.1 mutation rate for initialization
+        Individual mutated = mutate(seed, 0.1, k, alpha, beta, gen);  // Using 0.1 mutation rate for initialization
         
         // Ensure the mutated graph is valid
         if (!isValidGraph(mutated.graph, k)) {
@@ -97,17 +97,12 @@ void Grow::initializePopulationWithSeeds(std::vector<Individual>& population, in
             continue;
         }
         
-        // Update fitness metrics for the mutated individual
-        mutated.aspl = computeASPL(mutated.graph);
-        mutated.algebraicConnectivity = computeAlgebraicConnectivity(mutated.graph);
-        mutated.fitness = mutated.aspl;
-        
         population.push_back(mutated);
     }
     
     // Add random individuals for the remaining 10%
     for (int i = 0; i < numRandom; ++i) {
-        population.push_back(createIndividual(n, k, symmetry));
+        population.push_back(createIndividual(n, k, symmetry, alpha, beta));
     }
 }
 
@@ -149,7 +144,7 @@ Individual Grow::parseGraphFromCSV(const std::string& filename) {
     ind.graph = graph;
     ind.aspl = computeASPL(graph);
     ind.algebraicConnectivity = computeAlgebraicConnectivity(graph);
-    ind.fitness = ind.aspl; // For now, we'll use ASPL as the fitness
+    ind.fitness = alpha * ind.aspl - beta * ind.algebraicConnectivity;
     return ind;
 }
 

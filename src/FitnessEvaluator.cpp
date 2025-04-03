@@ -1,4 +1,4 @@
-#include "FitnessEvaluator.hpp"
+#include "functions.hpp"
 #include "DynamicBitSet.cpp"  
 #include <Eigen/Sparse>
 #include <Spectra/SymEigsSolver.h>

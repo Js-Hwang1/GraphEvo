@@ -7,18 +7,17 @@
 #include <iostream>
 #include <functional>
 
-Individual createIndividual(int n, int degree, int symmetry) {
+Individual createIndividual(int n, int degree, int symmetry, double alpha, double beta) {
     Individual ind;
     ind.graph = generateSymmetricGraph(n, degree, symmetry);
     ind.aspl = computeASPL(ind.graph);
     ind.algebraicConnectivity = computeAlgebraicConnectivity(ind.graph);
-    double lambda = 1;
-    ind.fitness = ind.aspl - lambda * ind.algebraicConnectivity;
+    ind.fitness = alpha * ind.aspl - beta * ind.algebraicConnectivity;
     return ind;
 }
 
 //MRG
-Individual crossover(const Individual &parent1, const Individual &parent2, int n, int degree, int symmetry, std::mt19937 &rng) {
+Individual crossover(const Individual &parent1, const Individual &parent2, int n, int degree, int symmetry, double alpha, double beta, std::mt19937 &rng) {
     // Use a random distribution
     std::uniform_real_distribution<> probDist(0.0, 1.0);
     
@@ -234,12 +233,11 @@ Individual crossover(const Individual &parent1, const Individual &parent2, int n
     child.graph = childGraph;
     child.aspl = computeASPL(childGraph);
     child.algebraicConnectivity = computeAlgebraicConnectivity(childGraph);
-    double lambda = 1.0;
-    child.fitness = child.aspl - lambda * child.algebraicConnectivity;
+    child.fitness = alpha * child.aspl - beta * child.algebraicConnectivity;
     return child;
 }
 
-Individual mutate(const Individual &parent, double mutationRate, int targetDegree, std::mt19937 &rng) {
+Individual mutate(const Individual &parent, double mutationRate, int targetDegree, double alpha, double beta, std::mt19937 &rng) {
     // Create a copy of the parent as the initial child.
     Individual child = parent;
     int n = child.graph.size();
@@ -321,10 +319,10 @@ Individual mutate(const Individual &parent, double mutationRate, int targetDegre
         child.graph = generateSymmetricGraph(n, targetDegree, 1);  // Fallback with symmetry = 1.
     }
 
-    // Recompute fitness.
+    // Update fitness metrics for the mutated individual
     child.aspl = computeASPL(child.graph);
     child.algebraicConnectivity = computeAlgebraicConnectivity(child.graph);
-    double lambda = 1.0;
-    child.fitness = child.aspl - lambda * child.algebraicConnectivity;
+    child.fitness = alpha * child.aspl - beta * child.algebraicConnectivity;
+    
     return child;
 }

@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 
         // Default parameters.
         int n = 64, k = 3, symmetry = 1, populationSize = 1000, generations = 2000;
-        double mutationRate = 0.01, tolerance = 0.0001;
+        double mutationRate = 0.01, tolerance = 0.0001, a = 1, b = 1;
         std::string seedDirectory;
 
         // Parse command-line arguments.
@@ -38,7 +38,12 @@ int main(int argc, char* argv[]) {
                 tolerance = atof(argv[++i]);
             } else if (strcmp(argv[i], "--seed-dir") == 0 && i + 1 < argc) {
                 seedDirectory = argv[++i];
-            } else {
+            } else if (strcmp(argv[i], "-a") == 0 && i + 1 < argc) {
+                a = atoi(argv[++i]);
+            } else if (strcmp(argv[i], "-b") == 0 && i + 1 < argc) {
+                b = atoi(argv[++i]);
+            }
+            else {
                 printUsage(argv[0]);
                 return 1;
             }
@@ -57,7 +62,7 @@ int main(int argc, char* argv[]) {
 
         // Create the GA engine with seed graph support if directory is provided
         bool useSeedGraphs = !seedDirectory.empty();
-        GeneticAlgorithm ga(n, k, symmetry, populationSize, generations, mutationRate, tolerance, useSeedGraphs);
+        GeneticAlgorithm ga(n, k, symmetry, populationSize, generations, mutationRate, tolerance, useSeedGraphs, a, b);
         
         if (useSeedGraphs) {
             ga.setSeedGraphDirectory(seedDirectory);
