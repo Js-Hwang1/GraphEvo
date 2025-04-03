@@ -6,6 +6,9 @@
 #include <cassert>
 #include <iostream>
 #include <functional>
+#include <queue>
+#include <vector>
+#include <map>
 
 Individual createIndividual(int n, int degree, int symmetry, double alpha, double beta) {
     Individual ind;
@@ -237,92 +240,268 @@ Individual crossover(const Individual &parent1, const Individual &parent2, int n
     return child;
 }
 
-Individual mutate(const Individual &parent, double mutationRate, int targetDegree, double alpha, double beta, std::mt19937 &rng) {
-    // Create a copy of the parent as the initial child.
-    Individual child = parent;
-    int n = child.graph.size();
-    std::uniform_real_distribution<> probDist(0.0, 1.0);
-
-    // With probability mutationRate, perform an opt-2 mutation.
-    if (probDist(rng) < mutationRate) {
-        // Collect all unique undirected edges (each edge only once).
-        std::vector<std::pair<int, int>> edges;
-        for (int i = 0; i < n; i++) {
-            for (int j : child.graph[i]) {
-                if (j > i) {  // Ensure uniqueness.
-                    edges.push_back({i, j});
+// Helper function to compute shortest path distribution
+std::vector<int> computeShortestPathDistribution(const Graph& g) {
+    int n = g.size();
+    std::vector<int> distribution(n, 0);  // distribution[i] = number of paths of length i
+    std::vector<bool> visited(n);
+    std::queue<std::pair<int, int>> q;  // {vertex, distance}
+    
+    // Compute distribution from each vertex
+    for (int start = 0; start < n; start++) {
+        std::fill(visited.begin(), visited.end(), false);
+        q.push({start, 0});
+        visited[start] = true;
+        
+        while (!q.empty()) {
+            auto [v, dist] = q.front();
+            q.pop();
+            
+            distribution[dist]++;
+            
+            for (int u : g[v]) {
+                if (!visited[u]) {
+                    visited[u] = true;
+                    q.push({u, dist + 1});
                 }
             }
         }
-        // Proceed only if at least two edges exist.
-        if (edges.size() >= 2) {
-            int idx1 = -1, idx2 = -1;
-            bool validPair = false;
-            // Try up to 100 times to select two edges with no common vertices.
-            for (int attempt = 0; attempt < 100; attempt++) {
-                idx1 = std::uniform_int_distribution<>(0, edges.size()-1)(rng);
-                idx2 = std::uniform_int_distribution<>(0, edges.size()-1)(rng);
-                if (idx1 == idx2)
-                    continue;
-                auto e1 = edges[idx1];
-                auto e2 = edges[idx2];
-                if (e1.first != e2.first && e1.first != e2.second &&
-                    e1.second != e2.first && e1.second != e2.second) {
-                    validPair = true;
-                    break;
+    }
+    
+    // Normalize by 2 (since each path is counted twice)
+    for (int& count : distribution) {
+        count /= 2;
+    }
+    
+    return distribution;
+}
+
+// Helper function to compute theoretical distribution
+std::vector<double> computeTheoreticalDistribution(int n, int k) {
+    std::vector<double> distribution;
+    double totalEdges = static_cast<double>(k) * n / 2.0;
+    double totalPairs = static_cast<double>(n) * (n - 1) / 2.0;
+    double totsum = 0.0;
+    
+    int i = 1;
+    while (true) {
+        double term = pow((k - 1), i - 1) * totalEdges;
+        if (totsum + term >= totalPairs) {
+            distribution.push_back((totalPairs - totsum) / totalPairs);
+            break;
+        } else {
+            distribution.push_back(term / totalPairs);
+            totsum += term;
+            i++;
+        }
+    }
+    
+    return distribution;
+}
+
+Individual smartMutate(const Individual& parent, double mutationRate, int targetDegree, double alpha, double beta, std::mt19937& rng) {
+    Individual child = parent;
+    int n = child.graph.size();
+    std::uniform_real_distribution<> probDist(0.0, 1.0);
+    
+    if (probDist(rng) < mutationRate) {
+        // Compute current and theoretical distributions
+        auto currentDist = computeShortestPathDistribution(child.graph);
+        auto theoreticalDist = computeTheoreticalDistribution(n, targetDegree);
+        
+        // Find the path length with maximum deviation
+        int maxDeviationLength = 0;
+        double maxDeviation = 0.0;
+        
+        for (size_t i = 0; i < std::min(currentDist.size(), theoreticalDist.size()); i++) {
+            double deviation = std::abs(static_cast<double>(currentDist[i]) / (n * (n-1) / 2) - theoreticalDist[i]);
+            if (deviation > maxDeviation) {
+                maxDeviation = deviation;
+                maxDeviationLength = i;
+            }
+        }
+        
+        // Collect edges that could be modified to improve the distribution
+        std::vector<std::pair<int, int>> candidateEdges;
+        for (int i = 0; i < n; i++) {
+            for (int j : child.graph[i]) {
+                if (j > i) {  // Ensure uniqueness
+                    candidateEdges.push_back({i, j});
                 }
             }
-            if (validPair) {
-                auto e1 = edges[idx1];
-                auto e2 = edges[idx2];
-                // Two possible 2-opt swap options:
-                // Option 1: (e1.first, e2.first) and (e1.second, e2.second)
-                // Option 2: (e1.first, e2.second) and (e1.second, e2.first)
-                bool option = (probDist(rng) < 0.5);
-                std::pair<int, int> newEdge1, newEdge2;
-                if (option) {
-                    newEdge1 = {e1.first, e2.first};
-                    newEdge2 = {e1.second, e2.second};
-                } else {
-                    newEdge1 = {e1.first, e2.second};
-                    newEdge2 = {e1.second, e2.first};
-                }
-                // Lambda to remove an edge from the graph.
+        }
+        
+        // Try to modify edges to improve the distribution
+        bool improved = false;
+        int maxAttempts = 100;
+        int attempts = 0;
+        
+        while (!improved && attempts < maxAttempts) {
+            attempts++;
+            
+            // Select two random edges
+            if (candidateEdges.size() < 2) break;
+            
+            int idx1 = std::uniform_int_distribution<>(0, candidateEdges.size()-1)(rng);
+            int idx2 = std::uniform_int_distribution<>(0, candidateEdges.size()-1)(rng);
+            if (idx1 == idx2) continue;
+            
+            auto e1 = candidateEdges[idx1];
+            auto e2 = candidateEdges[idx2];
+            
+            // Try different 2-opt swap options
+            std::vector<std::pair<std::pair<int, int>, std::pair<int, int>>> options = {
+                {{e1.first, e2.first}, {e1.second, e2.second}},
+                {{e1.first, e2.second}, {e1.second, e2.first}}
+            };
+            
+            for (const auto& option : options) {
+                // Create a temporary graph for testing
+                Graph tempGraph = child.graph;
+                
+                // Remove original edges
                 auto removeEdge = [&](int u, int v) {
-                    auto it = std::find(child.graph[u].begin(), child.graph[u].end(), v);
-                    if (it != child.graph[u].end()) {
-                        child.graph[u].erase(it);
+                    auto it = std::find(tempGraph[u].begin(), tempGraph[u].end(), v);
+                    if (it != tempGraph[u].end()) {
+                        tempGraph[u].erase(it);
                     }
                 };
-                // Lambda to add an edge (if not already present) and enforce symmetry.
+                
+                // Add new edges
                 auto addEdge = [&](int u, int v) {
-                    if (std::find(child.graph[u].begin(), child.graph[u].end(), v) == child.graph[u].end()) {
-                        child.graph[u].push_back(v);
+                    if (std::find(tempGraph[u].begin(), tempGraph[u].end(), v) == tempGraph[u].end()) {
+                        tempGraph[u].push_back(v);
                     }
                 };
-                // Remove the original edges.
+                
                 removeEdge(e1.first, e1.second);
                 removeEdge(e1.second, e1.first);
                 removeEdge(e2.first, e2.second);
                 removeEdge(e2.second, e2.first);
-                // Add the new edges with symmetry.
-                addEdge(newEdge1.first, newEdge1.second);
-                addEdge(newEdge1.second, newEdge1.first);
-                addEdge(newEdge2.first, newEdge2.second);
-                addEdge(newEdge2.second, newEdge2.first);
+                
+                addEdge(option.first.first, option.first.second);
+                addEdge(option.first.second, option.first.first);
+                addEdge(option.second.first, option.second.second);
+                addEdge(option.second.second, option.second.first);
+                
+                // Check if the new graph is valid
+                if (isValidGraph(tempGraph, targetDegree)) {
+                    // Compute new distribution
+                    auto newDist = computeShortestPathDistribution(tempGraph);
+                    
+                    // Check if the new distribution is closer to theoretical
+                    double newDeviation = std::abs(static_cast<double>(newDist[maxDeviationLength]) / (n * (n-1) / 2) - 
+                                                theoreticalDist[maxDeviationLength]);
+                    
+                    if (newDeviation < maxDeviation) {
+                        child.graph = tempGraph;
+                        improved = true;
+                        break;
+                    }
+                }
             }
         }
     }
-
-    // Validate the mutated graph; if it fails to be k-regular, fall back to a deterministic construction.
-    if (!isValidGraph(child.graph, targetDegree)) {
-        child.graph = generateSymmetricGraph(n, targetDegree, 1);  // Fallback with symmetry = 1.
-    }
-
-    // Update fitness metrics for the mutated individual
+    
+    // Update fitness metrics
     child.aspl = computeASPL(child.graph);
     child.algebraicConnectivity = computeAlgebraicConnectivity(child.graph);
     child.fitness = alpha * child.aspl - beta * child.algebraicConnectivity;
     
     return child;
+}
+
+Individual mutate(const Individual& parent, double mutationRate, int targetDegree, double alpha, double beta, std::mt19937& rng) {
+    std::uniform_real_distribution<> probDist(0.0, 1.0);
+    
+    // 50% chance to use smart mutation, 50% chance to use 2-opt mutation
+    if (probDist(rng) < 0.5) {
+        return smartMutate(parent, mutationRate, targetDegree, alpha, beta, rng);
+    } else {
+        // Original 2-opt mutation code
+        Individual child = parent;
+        int n = child.graph.size();
+        
+        if (probDist(rng) < mutationRate) {
+            // Collect all unique undirected edges (each edge only once).
+            std::vector<std::pair<int, int>> edges;
+            for (int i = 0; i < n; i++) {
+                for (int j : child.graph[i]) {
+                    if (j > i) {  // Ensure uniqueness.
+                        edges.push_back({i, j});
+                    }
+                }
+            }
+            // Proceed only if at least two edges exist.
+            if (edges.size() >= 2) {
+                int idx1 = -1, idx2 = -1;
+                bool validPair = false;
+                // Try up to 100 times to select two edges with no common vertices.
+                for (int attempt = 0; attempt < 100; attempt++) {
+                    idx1 = std::uniform_int_distribution<>(0, edges.size()-1)(rng);
+                    idx2 = std::uniform_int_distribution<>(0, edges.size()-1)(rng);
+                    if (idx1 == idx2)
+                        continue;
+                    auto e1 = edges[idx1];
+                    auto e2 = edges[idx2];
+                    if (e1.first != e2.first && e1.first != e2.second &&
+                        e1.second != e2.first && e1.second != e2.second) {
+                        validPair = true;
+                        break;
+                    }
+                }
+                if (validPair) {
+                    auto e1 = edges[idx1];
+                    auto e2 = edges[idx2];
+                    // Two possible 2-opt swap options:
+                    // Option 1: (e1.first, e2.first) and (e1.second, e2.second)
+                    // Option 2: (e1.first, e2.second) and (e1.second, e2.first)
+                    bool option = (probDist(rng) < 0.5);
+                    std::pair<int, int> newEdge1, newEdge2;
+                    if (option) {
+                        newEdge1 = {e1.first, e2.first};
+                        newEdge2 = {e1.second, e2.second};
+                    } else {
+                        newEdge1 = {e1.first, e2.second};
+                        newEdge2 = {e1.second, e2.first};
+                    }
+                    // Lambda to remove an edge from the graph.
+                    auto removeEdge = [&](int u, int v) {
+                        auto it = std::find(child.graph[u].begin(), child.graph[u].end(), v);
+                        if (it != child.graph[u].end()) {
+                            child.graph[u].erase(it);
+                        }
+                    };
+                    // Lambda to add an edge (if not already present) and enforce symmetry.
+                    auto addEdge = [&](int u, int v) {
+                        if (std::find(child.graph[u].begin(), child.graph[u].end(), v) == child.graph[u].end()) {
+                            child.graph[u].push_back(v);
+                        }
+                    };
+                    // Remove the original edges.
+                    removeEdge(e1.first, e1.second);
+                    removeEdge(e1.second, e1.first);
+                    removeEdge(e2.first, e2.second);
+                    removeEdge(e2.second, e2.first);
+                    // Add the new edges with symmetry.
+                    addEdge(newEdge1.first, newEdge1.second);
+                    addEdge(newEdge1.second, newEdge1.first);
+                    addEdge(newEdge2.first, newEdge2.second);
+                    addEdge(newEdge2.second, newEdge2.first);
+                }
+            }
+        }
+        
+        // Validate the mutated graph; if it fails to be k-regular, fall back to a deterministic construction.
+        if (!isValidGraph(child.graph, targetDegree)) {
+            child.graph = generateSymmetricGraph(n, targetDegree, 1);  // Fallback with symmetry = 1.
+        }
+        
+        // Update fitness metrics for the mutated individual
+        child.aspl = computeASPL(child.graph);
+        child.algebraicConnectivity = computeAlgebraicConnectivity(child.graph);
+        child.fitness = alpha * child.aspl - beta * child.algebraicConnectivity;
+        
+        return child;
+    }
 }

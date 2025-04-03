@@ -57,6 +57,9 @@ bool GeneticAlgorithm::run() {
                 if (!converged) {
                     converged = true;
                     convergenceGeneration = gen;
+                    if((int) beta == 0){
+                        beta = 1;
+                    }
                     std::cout << "Convergence achieved at generation " << gen 
                               << ". Continuing for " << extraGenerations 
                               << " extra generations to explore further improvements." << std::endl;

@@ -13,4 +13,7 @@ Individual mutate(const Individual &parent, double mutationRate, int targetDegre
 // Performs crossover between two individuals.
 Individual crossover(const Individual &parent1, const Individual &parent2, int n, int degree, int symmetry, double alpha, double beta, std::mt19937 &rng);
 
+// Function declarations
+Individual smartMutate(const Individual& parent, double mutationRate, int targetDegree, double alpha, double beta, std::mt19937& rng);
+
 #endif // GENETIC_OPERATORS_HPP
