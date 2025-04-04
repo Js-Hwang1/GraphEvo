@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+recursive-include cpp/include *.hpp *.h
+recursive-include cpp/third_party/eigen *
+recursive-include cpp/third_party/spectra/include *

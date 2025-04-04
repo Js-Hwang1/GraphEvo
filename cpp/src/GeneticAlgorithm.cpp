@@ -105,11 +105,6 @@ bool GeneticAlgorithm::run() {
         #pragma omp parallel for schedule(dynamic)
         #endif
         for (int i = 0; i < offspringCount; i++) {
-            #ifdef _OPENMP
-            int thread_id = omp_get_thread_num();
-            #else
-            int thread_id = 0;
-            #endif
             // Create a thread-local RNG seeded from the global rng.
             std::mt19937 local_rng(rng());
             std::uniform_int_distribution<> distr(0, (populationSize / 2) - 1);
